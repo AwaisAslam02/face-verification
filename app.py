@@ -15,7 +15,7 @@ CORS(app)
 
 
 AWS_REGION = "eu-west-2"
-BUCKET_NAME = "face-verificationx"
+BUCKET_NAME = "face-verificationx1"
 COLLECTION_ID = "face-collection"  
 
 
