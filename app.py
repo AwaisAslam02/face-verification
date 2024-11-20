@@ -14,7 +14,7 @@ app = Flask(__name__)
 CORS(app)  
 
 
-AWS_REGION = "us-east-1"
+AWS_REGION = "eu-north-1"
 BUCKET_NAME = "face-verificationx"
 COLLECTION_ID = "face-collection"  
 
