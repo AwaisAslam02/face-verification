@@ -5,7 +5,7 @@ import streamlit as st
 import requests
 
 # Set backend URL
-backend_url = "http://127.0.0.1:5000" 
+backend_url = "http://16.171.110.123:5000" 
 
 st.title("Facial Recognition System")
 uploaded_file = st.file_uploader("Choose an image to upload for registration or verification", type=["jpg", "jpeg", "png"])
