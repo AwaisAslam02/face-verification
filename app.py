@@ -15,7 +15,7 @@ CORS(app)
 
 
 AWS_REGION = "us-east-1"
-BUCKET_NAME = "image-rekognition-2"
+BUCKET_NAME = "face-verificationx"
 COLLECTION_ID = "face-collection"  
 
 
