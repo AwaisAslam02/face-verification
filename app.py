@@ -119,12 +119,12 @@ def verify_face_bytes():
         )
 
         if response['FaceMatches']:
-            print(response['FaceMatches'][0]['Face']['FaceId'])
+            # print(response['FaceMatches'][0]['Face']['FaceId'])
             face = dynamodb.get_item(
                 TableName='face_collection',  
                 Key={'RekognitionId': {'S': response['FaceMatches'][0]['Face']['FaceId']}}
                 )
-            print(face)
+            # print(face)
             return jsonify({"message": "Face matched", "face_id": face["Item"]["FullName"]["S"]}), 200
         else:
             return jsonify({"message": "No matching face found"}), 404
