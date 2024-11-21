@@ -124,7 +124,7 @@ def verify_face_bytes():
                 TableName='face_collection',  
                 Key={'RekognitionId': {'S': response['FaceMatches'][0]['Face']['FaceId']}}
                 )
-            return jsonify({"message": "Face matched", "face_id": face["Item"]["Fulname"]["S"]}), 200
+            return jsonify({"message": "Face matched", "face_id": face["Item"]["Fullname"]["S"]}), 200
         else:
             return jsonify({"message": "No matching face found"}), 404
 
