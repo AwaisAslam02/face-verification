@@ -1,6 +1,3 @@
-
-
-
 import streamlit as st
 import requests
 
@@ -14,7 +11,7 @@ if uploaded_file:
     # Display image preview
     st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
 
-    # Upload button
+    # Upload and Register button
     if st.button("Upload and Register"):
         with st.spinner("Uploading and registering..."):
             files = {'file': uploaded_file}
@@ -31,7 +28,7 @@ if uploaded_file:
             else:
                 st.error(response.json().get("error", "Upload failed"))
 
-    # Verify button
+    # Upload and Verify button
     if st.button("Upload and Verify"):
         with st.spinner("Uploading and verifying..."):
             files = {'file': uploaded_file}
@@ -43,6 +40,12 @@ if uploaded_file:
                 verify_response = requests.post(f"{backend_url}/verify-face", json={"file_name": file_name})
                 if verify_response.status_code == 200:
                     st.success("Face matched successfully!")
+                    matched_image_url = verify_response.json().get("matched_image_url")
+                    if matched_image_url:
+                        # Display the matched image
+                        st.image(matched_image_url, caption="Matched Image", use_column_width=True)
+                    else:
+                        st.warning("Matched image URL not available.")
                 elif verify_response.status_code == 404:
                     st.warning("No matching face found.")
                 else:
