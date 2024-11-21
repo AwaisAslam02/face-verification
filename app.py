@@ -1,9 +1,3 @@
-
-
-
-
-
-
 from flask import Flask, request, jsonify
 import boto3
 import os
@@ -81,7 +75,8 @@ def register_face():
                     'Name': file_name
                 }
             },
-            DetectionAttributes=['ALL']
+            DetectionAttributes=['ALL'],
+            ExternalImageId=file_name  # Set ExternalImageId to the file name
         )
 
         if response['FaceRecords']:
@@ -115,7 +110,20 @@ def verify_face():
         )
 
         if response['FaceMatches']:
-            return jsonify({"message": "Face matched", "face_id": response['FaceMatches'][0]['Face']['FaceId']}), 200
+            matched_face = response['FaceMatches'][0]['Face']
+            matched_face_id = matched_face['FaceId']
+            matched_external_image_id = matched_face['ExternalImageId']
+
+            # Generate pre-signed URL for the matched image
+            matched_presigned_url = s3.generate_presigned_url('get_object',
+                Params={'Bucket': BUCKET_NAME, 'Key': matched_external_image_id},
+                ExpiresIn=3600)  # URL valid for 1 hour
+
+            return jsonify({
+                "message": "Face matched",
+                "face_id": matched_face_id,
+                "matched_image_url": matched_presigned_url
+            }), 200
         else:
             return jsonify({"message": "No matching face found"}), 404
 
@@ -125,4 +133,3 @@ def verify_face():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-    
