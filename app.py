@@ -15,7 +15,7 @@ COLLECTION_ID = "face-collection2"
 # Initialize AWS clients
 s3 = boto3.client('s3', region_name=AWS_REGION)
 rekognition = boto3.client('rekognition', region_name=AWS_REGION)
-dynamodb = boto3.client('dynamodb')
+dynamodb = boto3.client('dynamodb', region_name=AWS_REGION)
 
 # Create the face collection if it does not exist
 try:
