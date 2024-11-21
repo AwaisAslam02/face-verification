@@ -1,8 +1,6 @@
-
-
-
 import streamlit as st
 import requests
+import base64
 
 # Set backend URL
 backend_url = "http://13.40.154.15:5000" 
@@ -13,8 +11,8 @@ uploaded_file = st.file_uploader("Choose an image to upload for registration or 
 if uploaded_file:
     # Display image preview
     st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
-
-    # Upload button
+    
+    # Registration Button
     if st.button("Upload and Register"):
         with st.spinner("Uploading and registering..."):
             files = {'file': uploaded_file}
@@ -30,22 +28,21 @@ if uploaded_file:
                     st.error(register_response.json().get("error", "Registration failed"))
             else:
                 st.error(response.json().get("error", "Upload failed"))
+    
+    # Verification Button
+    if st.button("Verify Face"):
+        with st.spinner("Verifying..."):
+            # Read image bytes
+            image_bytes = uploaded_file.read()
+            # Encode image bytes to base64 to send in JSON
+            encoded_image = base64.b64encode(image_bytes).decode('utf-8')
+            
+            verify_payload = {"image_bytes": encoded_image}
+            verify_response = requests.post(f"{backend_url}/verify-face-bytes", json=verify_payload)
 
-    # Verify button
-    if st.button("Upload and Verify"):
-        with st.spinner("Uploading and verifying..."):
-            files = {'file': uploaded_file}
-            response = requests.post(f"{backend_url}/upload", files=files)
-
-            if response.status_code == 200:
-                file_name = response.json().get("file_name")
-                # Verify the face
-                verify_response = requests.post(f"{backend_url}/verify-face", json={"file_name": file_name})
-                if verify_response.status_code == 200:
-                    st.success("Face matched successfully!")
-                elif verify_response.status_code == 404:
-                    st.warning("No matching face found.")
-                else:
-                    st.error(verify_response.json().get("error", "Verification failed"))
+            if verify_response.status_code == 200:
+                st.success("Face matched successfully!")
+            elif verify_response.status_code == 404:
+                st.warning("No matching face found.")
             else:
-                st.error(response.json().get("error", "Upload failed"))
+                st.error(verify_response.json().get("error", "Verification failed"))

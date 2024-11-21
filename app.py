@@ -1,23 +1,16 @@
-
-
-
-
-
-
 from flask import Flask, request, jsonify
 import boto3
 import os
 import uuid
 from flask_cors import CORS
+import base64
 
 app = Flask(__name__)
 CORS(app)  
 
-
 AWS_REGION = "eu-west-2"
 BUCKET_NAME = "face-verificationx1"
 COLLECTION_ID = "face-collection"  
-
 
 # Initialize AWS clients
 s3 = boto3.client('s3', region_name=AWS_REGION)
@@ -51,7 +44,6 @@ def upload_image():
         return jsonify({"error": "Invalid file format. Only .jpg, .jpeg, and .png are allowed"}), 400
 
     try:
-        
         file_name = f"{uuid.uuid4()}.jpg"
 
         # Upload to S3
@@ -93,7 +85,7 @@ def register_face():
         print(f"Error: {e}")
         return jsonify({"error": "An error occurred while registering the face"}), 500
 
-# Flask route to verify a face
+# Flask route to verify a face using S3
 @app.route('/verify-face', methods=['POST'])
 def verify_face():
     if 'file_name' not in request.json:
@@ -123,6 +115,33 @@ def verify_face():
         print(f"Error: {e}")
         return jsonify({"error": "An error occurred while verifying the face"}), 500
 
+# New Flask route to verify a face using image bytes
+@app.route('/verify-face-bytes', methods=['POST'])
+def verify_face_bytes():
+    if 'image_bytes' not in request.json:
+        return jsonify({"error": "Image bytes not provided"}), 400
+
+    try:
+        # Decode the base64 image bytes
+        image_data = base64.b64decode(request.json['image_bytes'])
+
+        response = rekognition.search_faces_by_image(
+            CollectionId=COLLECTION_ID,
+            Image={
+                'Bytes': image_data
+            },
+            MaxFaces=1,
+            FaceMatchThreshold=95 
+        )
+
+        if response['FaceMatches']:
+            return jsonify({"message": "Face matched", "face_id": response['FaceMatches'][0]['Face']['FaceId']}), 200
+        else:
+            return jsonify({"message": "No matching face found"}), 404
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"error": "An error occurred while verifying the face"}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-    
