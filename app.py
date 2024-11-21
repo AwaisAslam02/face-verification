@@ -119,6 +119,7 @@ def verify_face_bytes():
         )
 
         if response['FaceMatches']:
+            print(response['FaceMatches'][0]['Face']['FaceId'])
             face = dynamodb.get_item(
                 TableName='face_collection',  
                 Key={'RekognitionId': {'S': response['FaceMatches'][0]['Face']['FaceId']}}
