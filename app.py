@@ -10,11 +10,12 @@ CORS(app)
 
 AWS_REGION = "eu-west-2"
 BUCKET_NAME = "face-verificationx1"
-COLLECTION_ID = "face-collection"  
+COLLECTION_ID = "face-collection2"  
 
 # Initialize AWS clients
 s3 = boto3.client('s3', region_name=AWS_REGION)
 rekognition = boto3.client('rekognition', region_name=AWS_REGION)
+dynamodb = boto3.client('dynamodb')
 
 # Create the face collection if it does not exist
 try:
@@ -24,6 +25,17 @@ except rekognition.exceptions.ResourceAlreadyExistsException:
     print(f"Collection '{COLLECTION_ID}' already exists.")
 except Exception as e:
     print(f"Error creating collection: {e}")
+
+
+def update_index(tableName,faceId, fullName):
+    response = dynamodb.put_item(
+        TableName=tableName,
+        Item={
+            'RekognitionId': {'S': faceId},
+            'FullName': {'S': fullName}
+            }
+        ) 
+
 
 def upload_to_s3(file, bucket_name, file_name):
     try:
@@ -63,6 +75,7 @@ def register_face():
         return jsonify({"error": "File name not provided"}), 400
 
     file_name = request.json['file_name']
+    personFullName  = request.json['name']
 
     try:
         response = rekognition.index_faces(
@@ -77,6 +90,8 @@ def register_face():
         )
 
         if response['FaceRecords']:
+            faceId = response['FaceRecords'][0]['Face']['FaceId']
+            update_index('face_collection',faceId,personFullName)
             return jsonify({"message": "Face registered successfully", "face_id": response['FaceRecords'][0]['Face']['FaceId']}), 200
         else:
             return jsonify({"error": "No faces detected in the image"}), 400
@@ -85,37 +100,6 @@ def register_face():
         print(f"Error: {e}")
         return jsonify({"error": "An error occurred while registering the face"}), 500
 
-# Flask route to verify a face using S3
-@app.route('/verify-face', methods=['POST'])
-def verify_face():
-    if 'file_name' not in request.json:
-        return jsonify({"error": "File name not provided"}), 400
-
-    file_name = request.json['file_name']
-
-    try:
-        response = rekognition.search_faces_by_image(
-            CollectionId=COLLECTION_ID,
-            Image={
-                'S3Object': {
-                    'Bucket': BUCKET_NAME,
-                    'Name': file_name
-                }
-            },
-            MaxFaces=1,
-            FaceMatchThreshold=95 
-        )
-
-        if response['FaceMatches']:
-            return jsonify({"message": "Face matched", "face_id": response['FaceMatches'][0]['Face']['FaceId']}), 200
-        else:
-            return jsonify({"message": "No matching face found"}), 404
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"error": "An error occurred while verifying the face"}), 500
-
-# New Flask route to verify a face using image bytes
 @app.route('/verify-face-bytes', methods=['POST'])
 def verify_face_bytes():
     if 'image_bytes' not in request.json:
@@ -135,7 +119,11 @@ def verify_face_bytes():
         )
 
         if response['FaceMatches']:
-            return jsonify({"message": "Face matched", "face_id": response['FaceMatches'][0]['Face']['FaceId']}), 200
+            face = dynamodb.get_item(
+                TableName='family_collection',  
+                Key={'RekognitionId': {'S': response['FaceMatches'][0]['Face']['FaceId']}}
+                )
+            return jsonify({"message": "Face matched", "face_id": face["Item"]["Fulname"]["S"]}), 200
         else:
             return jsonify({"message": "No matching face found"}), 404
 
