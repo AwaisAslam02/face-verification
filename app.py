@@ -26,16 +26,18 @@ except rekognition.exceptions.ResourceAlreadyExistsException:
 except Exception as e:
     print(f"Error creating collection: {e}")
 
-
-def update_index(tableName,faceId, fullName):
+def update_index(tableName, faceId, first_name, last_name, occupation, title, age):
     response = dynamodb.put_item(
         TableName=tableName,
         Item={
             'RekognitionId': {'S': faceId},
-            'FullName': {'S': fullName}
-            }
-        ) 
-
+            'FirstName': {'S': first_name},
+            'LastName': {'S': last_name},
+            'Occupation': {'S': occupation},
+            'Title': {'S': title},
+            'Age': {'N': str(age)}
+        }
+    )
 
 def upload_to_s3(file, bucket_name, file_name):
     try:
@@ -71,11 +73,16 @@ def upload_image():
 # Flask route to register a face
 @app.route('/register-face', methods=['POST'])
 def register_face():
-    if 'file_name' not in request.json:
-        return jsonify({"error": "File name not provided"}), 400
+    required_fields = ['file_name', 'first_name', 'last_name', 'occupation', 'title', 'age']
+    if not all(field in request.json for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
 
     file_name = request.json['file_name']
-    personFullName  = request.json['name']
+    first_name = request.json['first_name']
+    last_name = request.json['last_name']
+    occupation = request.json['occupation']
+    title = request.json['title']
+    age = request.json['age']
 
     try:
         response = rekognition.index_faces(
@@ -91,8 +98,8 @@ def register_face():
 
         if response['FaceRecords']:
             faceId = response['FaceRecords'][0]['Face']['FaceId']
-            update_index('face_collection',faceId,personFullName)
-            return jsonify({"message": "Face registered successfully", "face_id": response['FaceRecords'][0]['Face']['FaceId']}), 200
+            update_index('face_collection', faceId, first_name, last_name, occupation, title, age)
+            return jsonify({"message": "Face registered successfully", "face_id": faceId}), 200
         else:
             return jsonify({"error": "No faces detected in the image"}), 400
 
@@ -119,13 +126,29 @@ def verify_face_bytes():
         )
 
         if response['FaceMatches']:
-            # print(response['FaceMatches'][0]['Face']['FaceId'])
+            face_id = response['FaceMatches'][0]['Face']['FaceId']
             face = dynamodb.get_item(
                 TableName='face_collection',  
-                Key={'RekognitionId': {'S': response['FaceMatches'][0]['Face']['FaceId']}}
-                )
-            # print(face)
-            return jsonify({"message": "Face matched", "face_id": face["Item"]["FullName"]["S"]}), 200
+                Key={'RekognitionId': {'S': face_id}}
+            )
+            if 'Item' in face:
+                item = face['Item']
+                first_name = item.get('FirstName', {}).get('S', '')
+                last_name = item.get('LastName', {}).get('S', '')
+                occupation = item.get('Occupation', {}).get('S', '')
+                title = item.get('Title', {}).get('S', '')
+                age = item.get('Age', {}).get('N', '')
+
+                return jsonify({
+                    "message": "Face matched",
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "occupation": occupation,
+                    "title": title,
+                    "age": age
+                }), 200
+            else:
+                return jsonify({"error": "Face ID not found in database"}), 404
         else:
             return jsonify({"message": "No matching face found"}), 404
 
